@@ -1,0 +1,9 @@
+---
+applications:
+- name: chatbot-simple-sandi
+  command: npm start
+  path: .
+  memory: 256M
+  instances: 1
+  env:
+    NPM_CONFIG_PRODUCTION: false

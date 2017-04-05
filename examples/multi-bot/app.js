@@ -16,38 +16,48 @@
 
 require('dotenv').load();
 
+var bodyParser = require('body-parser');
+var verify = require('./security');
+
 var middleware = require('botkit-middleware-watson')({
-  username: process.env.CONVERSATION_USERNAME,
-  password: process.env.CONVERSATION_PASSWORD,
-  workspace_id: process.env.WORKSPACE_ID,
-  version_date: '2016-09-20'
+    username: process.env.CONVERSATION_USERNAME,
+    password: process.env.CONVERSATION_PASSWORD,
+    workspace_id: process.env.WORKSPACE_ID,
+    version_date: '2016-09-20'
 });
 
-module.exports = function(app) {
-  if (process.env.USE_SLACK) {
-    var Slack = require('./bot-slack');
-    Slack.controller.middleware.receive.use(middleware.receive);
-    Slack.bot.startRTM();
-    console.log('Slack bot is live');
-  }
-  if (process.env.USE_FACEBOOK) {
-    var Facebook = require('./bot-facebook');
-    Facebook.controller.middleware.receive.use(middleware.receive);
-    Facebook.controller.createWebhookEndpoints(app, Facebook.bot);
-    console.log('Facebook bot is live');
-  }
-  if (process.env.USE_TWILIO) {
-    var Twilio = require('./bot-twilio');
-    Twilio.controller.middleware.receive.use(middleware.receive);
-    Twilio.controller.createWebhookEndpoints(app, Twilio.bot);
-    console.log('Twilio bot is live');
-  }
-  // Customize your Watson Middleware object's before and after callbacks.
-  middleware.before = function(message, conversationPayload, callback) {
-    callback(null, conversationPayload);
-  }
+module.exports = function (app) {
+    if (process.env.USE_SLACK) {
+        var Slack = require('./bot-slack');
+        Slack.controller.middleware.receive.use(middleware.receive);
+        Slack.bot.startRTM();
+        console.log('Slack bot is live');
+    }
+    if (process.env.USE_FACEBOOK) {
+        app.use(bodyParser.json({
+            verify: verify
+        }));
+        var Facebook = require('./bot-facebook');
+        Facebook.controller.middleware.receive.use(middleware.receive);
+        Facebook.controller.createWebhookEndpoints(app, Facebook.bot);
+        console.log('Facebook bot is live');
+    }
+    if (process.env.USE_TWILIO) {
+        var Twilio = require('./bot-twilio');
+        Twilio.controller.middleware.receive.use(middleware.receive);
+        Twilio.controller.createWebhookEndpoints(app, Twilio.bot);
+        console.log('Twilio bot is live');
+    }
+    if (process.env.USE_LINE) {
+        var bot = require("./bot-line");
+        app.post("/line/receive", bot.parser());
+    }
+    // Customize your Watson Middleware object's before and after callbacks.
+    middleware.before = function (message, conversationPayload, callback) {
+        callback(null, conversationPayload);
+    };
 
-  middleware.after = function(message, conversationResponse, callback) {
-    callback(null, conversationResponse);
-  }
+    middleware.after = function (message, conversationResponse, callback) {
+        callback(null, conversationResponse);
+    }
 };
